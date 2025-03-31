@@ -117,14 +117,17 @@ I can help you track expenses and provide insights about your spending habits.
 • "show my expenses"
 • "what did I spend today"
 • "show my last expense"
+• "show my recent X expense"
 • "show my expenses from last week"
 • "what are my total expenses this month"
 
 <b>3️⃣ To clean up your expenses:</b>
 • "delete all my expenses"
+• "delete my recent X expenses"
 • "erase my expenses from last month"
 • "clear my expense history"
 
+<b>3️⃣ To clean up your expenses:</b>
 Just tell me what you bought and how much it cost, or ask about your spending history!
 """
         send_telegram_reply(chat_id, message_id, helpful_message)
