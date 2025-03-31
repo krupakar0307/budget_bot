@@ -41,7 +41,7 @@ def lambda_handler(event, context):
         if not chat_id or not text:
             logger.error("🚨 Missing chat_id or text!")
             return {"statusCode": 400, "body": json.dumps({"message": "Invalid request"})}
-        
+
         # Check if the message has already been processed
         if check_if_processed(message_id):
             logger.info(f"⚠️ Message ID {message_id} has already been processed. Skipping...")
@@ -49,13 +49,15 @@ def lambda_handler(event, context):
 
         # Mark message as processed in DynamoDB
         mark_as_processed(message_id)
+
         # Restrict access to a specific user (krupakar_reddy)
-        if username != "krupaka_reddy":
+        if username != "krupakar_reddy":
             logger.error(f"🚨 Unauthorized access attempt by {username}!")
             send_telegram_reply(chat_id, message_id, "You do not have access")
             return {"statusCode": 403, "body": json.dumps({"message": "You do not have access"})}
             sys.exit(1)
 
+        
         # Check if this is a confirmation for expense deletion
         if is_deletion_confirmation(username, text):
             handle_deletion_confirmation(chat_id, message_id, username, text)
@@ -93,10 +95,6 @@ def lambda_handler(event, context):
                 
                 except ValueError as e:
                     logger.error(f"🔥 Invalid amount format: {analysis['amount']}, error: {e}")
-
-    except Exception as e:
-        logger.error(f"🔥 Error processing event: {str(e)}")
-        return {"statusCode": 500, "body": json.dumps({"message": "Internal server error"})}
 
         # If we get here, it's not a clear expense or query - show helpful message
         helpful_message = """
@@ -344,9 +342,8 @@ def get_user_expenses(username, time_range):
         return []
 
 
-def format_expense_summary(expenses, time_range, threshold=5000):
+def format_expense_summary(expenses, time_range, threshold=None):
     """ Format expenses into a readable summary """
-
     if threshold is None:
         threshold = 1000  # Default value if threshold is not set
     
@@ -395,7 +392,7 @@ def format_expense_summary(expenses, time_range, threshold=5000):
         else:
             response = [f"<b>💰 Your Expenses ({time_range['description']})</b>"]
             
-        response.append(f"<b>Total:</b> <u><b>₹{total:,.2f}</b></u>")
+        response.append(f"<b>Total:</b> ₹{total:,.2f}")
         
         # Add category breakdown
         response.append("\n<b>Category Breakdown:</b>")
@@ -418,8 +415,7 @@ def format_expense_summary(expenses, time_range, threshold=5000):
         remaining = len(sorted_expenses) - 5
         if remaining > 0 and limit is None:
             response.append(f"\n<i>+ {remaining} more transactions</i>")
-        
-        
+
         # Check threshold and add warning
         remaining = threshold - total
         if total >= threshold * 0.8:
@@ -429,10 +425,12 @@ def format_expense_summary(expenses, time_range, threshold=5000):
                 response.append(f"\n<b>⚠️ You've reached 80% of your threshold!</b> ₹{total:,.2f} out of ₹{threshold}. <i>Watch out, you're almost there!</i>")
 
         return "\n".join(response)
-
+        
+        return "\n".join(response)
     except Exception as e:
         logger.error(f"⚠️ Error formatting expense summary: {str(e)}")
         return "I encountered an error while formatting your expenses. Please try again."
+
 
 def send_telegram_reply(chat_id, message_id, text):
     """ Sends a reply to the specific message in Telegram with proper formatting """
@@ -540,7 +538,7 @@ def analyze_expense(prompt):
     
     system_prompt = """You are a smart expense tracking assistant for Indian users. Analyze the user's expense message and:
 
-1. Extract numerical amount in any format (₹500, 5k, 1.5L, 4L, 1Cr etc.) - where k = thousand (1000), L = Lakh (100,000) and Cr = Crore (10,000,000)
+1. Extract numerical amount in any format (₹500, 5k, 1.5L, 4L, 1Cr etc.) - where k=thousand, L = Lakh (100,000) and Cr = Crore (10,000,000)
 2. Determine the most appropriate category from this list:
    - Food (meals, restaurants, snacks, groceries, dining, coffee, tea, beverages)
    - Groceries (supermarket, fruits, vegetables, household items)
