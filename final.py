@@ -517,7 +517,7 @@ def analyze_expense(prompt):
     
     system_prompt = """You are a smart expense tracking assistant for Indian users. Analyze the user's expense message and:
 
-1. Extract numerical amount in any format (₹500, 5k, 1.5L, 4L, 1Cr etc.) - where k=thousand, L = Lakh (100,000) and Cr = Crore (10,000,000)
+1. Extract numerical amount in any format (₹500, 5k, 1.5L, 4L, 1Cr etc.) - where k = thousand (1000), L = Lakh (100,000) and Cr = Crore (10,000,000)
 2. Determine the most appropriate category from this list:
    - Food (meals, restaurants, snacks, groceries, dining, coffee, tea, beverages)
    - Groceries (supermarket, fruits, vegetables, household items)
