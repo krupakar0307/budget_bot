@@ -155,12 +155,12 @@ def mark_as_processed(message_id):
     except Exception as e:
         logger.error(f"⚠️ Error marking message in DynamoDB: {str(e)}")
 
-
 def store_user_expense(username, analysis, original_text):
     """ Store user expense in DynamoDB """
     try:
-        # Only store expenses with a valid non-zero amount
-        amount = float(analysis['amount'])
+        # Remove commas from the amount string before converting to float
+        amount = float(analysis['amount'].replace(",", ""))
+        
         if amount <= 0:
             logger.info(f"Skipping expense with zero or negative amount: {amount}")
             return
@@ -179,15 +179,17 @@ def store_user_expense(username, analysis, original_text):
                 "username": {"S": username},
                 "type": {"S": "EXPENSE"},
                 "timestamp": {"S": timestamp},
-                "amount": {"N": str(amount)},
-                "category": {"S": analysis['category']},
+                "amount": {"N": str(amount)},  # Ensure it's a valid float
+                "category": {"S": analysis.get("category", "Uncategorized")},
                 "description": {"S": original_text}
             }
         )
         logger.info(f"✅ Stored expense for user {username}")
+
+    except ValueError as ve:
+        logger.error(f"🔥 Invalid amount format: {analysis['amount']}, error: {ve}")
     except Exception as e:
         logger.error(f"⚠️ Error storing expense: {str(e)}")
-
 
         
 def is_expense_query(text):
@@ -1030,5 +1032,4 @@ def delete_specific_expenses(expense_ids):
     except Exception as e:
         logger.error(f"⚠️ Error deleting specific expenses: {str(e)}")
         raise e
-
 
