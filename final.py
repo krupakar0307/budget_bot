@@ -100,6 +100,9 @@ I can help you track expenses and provide insights about your spending habits.
 • "spent 500 on dinner"
 • "paid 1200 for groceries"
 • "bought shoes for 3000"
+• "set my threshold for 3000"
+• "set my limit 1000"
+• "limit 5K"
 • "purchased phone for 15000"
 • "2000 for rent"
 • "taxi 300"
@@ -333,79 +336,53 @@ def get_user_expenses(username, time_range):
         logger.error(f"⚠️ Error querying expenses: {str(e)}")
         return []
 
-
-def format_expense_summary(expenses, time_range):
-    """ Format expenses into a readable summary """
+def format_expense_summary(expenses, time_range, threshold=5000):
+    """ Format expenses into a readable summary with dynamic threshold """
+    if threshold is None:
+        threshold = 1000  # Default value if threshold is not set
+    
     if not expenses:
         return f"No expenses found for {time_range['description']}! 💸"
-    
+
     try:
-        # Sort expenses by timestamp (newest first)
-        sorted_expenses = sorted(expenses, key=lambda x: x['timestamp']['S'], reverse=True)
-        
-        # Apply limit if specified
-        limit = time_range.get('limit')
-        if limit is not None and limit > 0:
-            is_single = limit == 1
-            sorted_expenses = sorted_expenses[:limit]
-            
-            # If we're only showing a single expense, format differently
-            if is_single and sorted_expenses:
-                exp = sorted_expenses[0]
-                amount = float(exp['amount']['N'])
-                category = exp['category']['S']
-                desc = exp.get('description', {}).get('S', category)
-                date = datetime.fromisoformat(exp['timestamp']['S']).strftime("%d %b, %H:%M")
-                
-                response = [f"<b>💰 Your Most Recent Expense</b>"]
-                response.append(f"<b>Amount:</b> ₹{amount:,.2f}")
-                response.append(f"<b>Category:</b> {category}")
-                response.append(f"<b>Details:</b> {desc}")
-                response.append(f"<b>Date:</b> {date}")
-                
-                return "\n".join(response)
-        
         # Calculate total
-        total = sum(float(exp['amount']['N']) for exp in sorted_expenses)
-        
-        # Group by category
+        total = sum(float(exp['amount']['N']) for exp in expenses)
+
+        # Format summary
+        response = [f"<b>💰 Your Expenses ({time_range['description']})</b>"]
+        response.append(f"<b>Total:</b> <b><u>₹{total:,.2f}</u></b>")
+
+        # Add category breakdown
         categories = {}
-        for exp in sorted_expenses:
+        for exp in expenses:
             cat = exp['category']['S']
             amount = float(exp['amount']['N'])
             categories[cat] = categories.get(cat, 0) + amount
-        
-        # Format summary
-        if limit is not None and limit > 0:
-            response = [f"<b>💰 Your {limit} Most Recent Expenses</b>"]
-        else:
-            response = [f"<b>💰 Your Expenses ({time_range['description']})</b>"]
-            
-        response.append(f"<b>Total:</b> ₹{total:,.2f}")
-        
-        # Add category breakdown
+
         response.append("\n<b>Category Breakdown:</b>")
         for cat, amount in sorted(categories.items(), key=lambda x: x[1], reverse=True):
             percentage = (amount / total) * 100
             response.append(f"• <b>{cat}:</b> ₹{amount:,.2f} ({percentage:.1f}%)")
-        
-        # Add transactions
+
+        # Add total transactions count if we limited them
         response.append("\n<b>Transactions:</b>")
-        for idx, exp in enumerate(sorted_expenses[:5]):
-            if idx >= 5 and limit is None:
-                break
+        for idx, exp in enumerate(expenses[:5]):
             amount = float(exp['amount']['N'])
             category = exp['category']['S']
             desc = exp.get('description', {}).get('S', category)
             date = datetime.fromisoformat(exp['timestamp']['S']).strftime("%d %b, %H:%M")
             response.append(f"• ₹{amount:,.2f} - {desc} ({date})")
-        
-        # Add total transactions count if we limited them
-        remaining = len(sorted_expenses) - 5
-        if remaining > 0 and limit is None:
-            response.append(f"\n<i>+ {remaining} more transactions</i>")
-        
+
+        # Check threshold and add warning
+        remaining = threshold - total
+        if total >= threshold * 0.8:
+            if total >= threshold:
+                response.append(f"\n<b>⚠️ You have reached your threshold of ₹{threshold}!</b> You're now at ₹{total:,.2f}. Be careful, you're getting close to overspending!")
+            else:
+                response.append(f"\n<b>⚠️ You've reached 80% of your threshold!</b> ₹{total:,.2f} out of ₹{threshold}. Watch out, you're almost there!")
+
         return "\n".join(response)
+
     except Exception as e:
         logger.error(f"⚠️ Error formatting expense summary: {str(e)}")
         return "I encountered an error while formatting your expenses. Please try again."
@@ -1032,4 +1009,3 @@ def delete_specific_expenses(expense_ids):
     except Exception as e:
         logger.error(f"⚠️ Error deleting specific expenses: {str(e)}")
         raise e
-
