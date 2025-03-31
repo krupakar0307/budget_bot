@@ -41,7 +41,7 @@ def lambda_handler(event, context):
         if not chat_id or not text:
             logger.error("🚨 Missing chat_id or text!")
             return {"statusCode": 400, "body": json.dumps({"message": "Invalid request"})}
-
+        
         # Check if the message has already been processed
         if check_if_processed(message_id):
             logger.info(f"⚠️ Message ID {message_id} has already been processed. Skipping...")
@@ -49,7 +49,13 @@ def lambda_handler(event, context):
 
         # Mark message as processed in DynamoDB
         mark_as_processed(message_id)
-        
+        # Restrict access to a specific user (krupakar_reddy)
+        if username != "krupaka_reddy":
+            logger.error(f"🚨 Unauthorized access attempt by {username}!")
+            send_telegram_reply(chat_id, message_id, "You do not have access")
+            return {"statusCode": 403, "body": json.dumps({"message": "You do not have access"})}
+            sys.exit(1)
+
         # Check if this is a confirmation for expense deletion
         if is_deletion_confirmation(username, text):
             handle_deletion_confirmation(chat_id, message_id, username, text)
@@ -87,6 +93,10 @@ def lambda_handler(event, context):
                 
                 except ValueError as e:
                     logger.error(f"🔥 Invalid amount format: {analysis['amount']}, error: {e}")
+
+    except Exception as e:
+        logger.error(f"🔥 Error processing event: {str(e)}")
+        return {"statusCode": 500, "body": json.dumps({"message": "Internal server error"})}
 
         # If we get here, it's not a clear expense or query - show helpful message
         helpful_message = """
@@ -414,9 +424,9 @@ def format_expense_summary(expenses, time_range, threshold=5000):
         remaining = threshold - total
         if total >= threshold * 0.8:
             if total >= threshold:
-                response.append(f"\n<b>⚠️ You have reached your threshold of ₹{threshold}!</b> You're now at ₹{total:,.2f}. Be careful, you're getting close to overspending!")
+                response.append(f"\n<b>⚠️ You have reached your threshold of ₹{threshold}!</b> You're now at <u><b>₹{total:,.2f}</b></u>. <b>🚨STOP! You're burning through your budget!</b>")
             else:
-                response.append(f"\n<b>⚠️ You've reached 80% of your threshold!</b> ₹{total:,.2f} out of ₹{threshold}. Watch out, you're almost there!")
+                response.append(f"\n<b>⚠️ You've reached 80% of your threshold!</b> ₹{total:,.2f} out of ₹{threshold}. <i>Watch out, you're almost there!</i>")
 
         return "\n".join(response)
 
