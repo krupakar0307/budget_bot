@@ -53,8 +53,9 @@ def lambda_handler(event, context):
         # Restrict access to a specific user (krupakar_reddy)
         if username != "krupakar_reddy":
             logger.error(f"🚨 Unauthorized access attempt by {username}!")
-            send_telegram_reply(chat_id, message_id, "You do not have access")
-            return {"statusCode": 403, "body": json.dumps({"message": "You do not have access"})}
+            send_telegram_reply(chat_id, message_id, "You do not have access, Please send hi @krupakar_reddy here, if you need to explore the bot.")
+            return {"statusCode": 403, "body": json.dumps({"message": "You do not have access, Please send hi @krupakar_reddy here, if you need to explore the bot."})}
+
             sys.exit(1)
 
         
@@ -105,12 +106,11 @@ I can help you track expenses and provide insights about your spending habits.
 <b>Here's how you can use me:</b>
 
 <b>1️⃣ To record expenses, try formats like:</b>
+• "taxi 300"
 • "spent 500 on dinner"
-• "paid 1200 for groceries"
 • "bought shoes for 3000"
 • "purchased phone for 15000"
 • "2000 for rent"
-• "taxi 300"
 • "1.5L for laptop" (I understand ₹, k, L and Cr formats)
 
 <b>2️⃣ To review your expenses, ask me:</b>
