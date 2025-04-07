@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  budget-bot
+
+  Sample SAM Template for budget-bot
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: The environment to deploy the stack to.
+    AllowedValues:
+      - dev
+      - prod
+    ConstraintDescription: Must be either dev or prod.
+
+Resources:
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      # Cors:
+      #   AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
+      #   AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      #   AllowOrigin: "'*'"
+  CustomRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: budget-bot-lambda-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        # - PolicyName: budget-bot-bedrock-policy
+        #   PolicyDocument:
+        #     Version: '2012-10-17'
+        #     Statement:
+        #       - Effect: Allow
+        #         Action:
+        #           - bedrock:InvokeModel
+        #           - bedrock:ListModels
+        #           - bedrock:InvokeModelWithResponseStream
+        #         Resource: "*"
+
+        ## need to add the dynamodb policy
+        # - PolicyName: budget-bot-dynamodb-policy
+        #   PolicyDocument: 
+        
+  BudgetBotFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: budget_bot/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Architectures:
+        - x86_64
+      Events:
+        BudgetBot:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /tracker
+            Method: post
+            RestApiId: !Ref MyApi
+
+Outputs:
+  # Using explicit API reference since ServerlessRestApi is not created when using a custom API resource.
+  BudgetBotApi:
+    Description: "API Gateway endpoint URL for Prod stage for BudgetBot function"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/tracker/"
+  BudgetBotFunction:
+    Description: "BudgetBot Lambda Function ARN"
+    Value: !GetAtt BudgetBotFunction.Arn
+  BudgetBotFunctionIamRole:
+    Description: "Implicit IAM Role created for BudgetBot function"
+    Value: !GetAtt BudgetBotFunctionRole.Arn
