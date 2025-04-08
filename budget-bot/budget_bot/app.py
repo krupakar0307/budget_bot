@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 # Environment Variables
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-DYNAMODB_TABLE = os.environ.get("DYNAMODB_TABLE", "ProcessedMessages")  # DynamoDB table name
+DYNAMODB_TABLE = os.environ.get("DYNAMODB_TABLE", "ProcessedMessages-1")  # DynamoDB table name
 
 # API Endpoints
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"

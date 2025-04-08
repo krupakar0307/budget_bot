@@ -19,6 +19,15 @@ Parameters:
       - dev
       - prod
     ConstraintDescription: Must be either dev or prod.
+  CustomDomainName:
+    Type: String
+    Default: "budget.app.krupakar.in"
+    Description: "Custom domain name for API Gateway"
+  CertificateArn:
+    Type: String
+    Description: "ARN of the AWS Certificate Manager (ACM) certificate for the domain"
+    Default: "arn:aws:acm:us-east-1:476422659135:certificate/7f2fc70e-06fe-49af-8e57-8f77c7763cc2"
+
 
 Resources:
   MyApi:
@@ -29,6 +38,34 @@ Resources:
       #   AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
       #   AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
       #   AllowOrigin: "'*'"
+
+  CustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !Ref CustomDomainName
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      RegionalCertificateArn: !Ref CertificateArn
+
+  ApiGatewayBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Ref CustomDomain
+      RestApiId: !Ref MyApi
+      Stage: !Ref Environment
+      # BasePath: ""
+
+  Route53Record:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: "app.krupakar.in."
+      Name: !Ref CustomDomainName
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt CustomDomain.RegionalHostedZoneId
+        DNSName: !GetAtt CustomDomain.RegionalDomainName
+
   CustomRole:
     Type: AWS::IAM::Role
     Properties:
@@ -51,6 +88,20 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
+        - PolicyName: budget-bot-dynamodb-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ProcessedMessages-1 
+
         # - PolicyName: budget-bot-bedrock-policy
         #   PolicyDocument:
         #     Version: '2012-10-17'
@@ -72,8 +123,13 @@ Resources:
       CodeUri: budget_bot/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Role: !GetAtt CustomRole.Arn 
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          TELEGRAM_BOT_TOKEN: ""
+          GEMINI_API_KEY: ""
       Events:
         BudgetBot:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -92,4 +148,4 @@ Outputs:
     Value: !GetAtt BudgetBotFunction.Arn
   BudgetBotFunctionIamRole:
     Description: "Implicit IAM Role created for BudgetBot function"
-    Value: !GetAtt BudgetBotFunctionRole.Arn
+    Value: !GetAtt CustomRole.Arn
