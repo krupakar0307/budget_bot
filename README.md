@@ -26,7 +26,8 @@ it had `makefile` to utilize.
 3. finally configure 2 environments vars for the lambda for now - GEMINI-API_KEY and telegram bot key.
 
 4. Finally attach/integrate telegram bot to your custom dns.
-for eg: 
-`curl -X POST "https://api.telegram.org/bot7231070881:AAFPwGvrniLcsRYv-HYBvmsZfwheBoMhOJY/setWebhook" -d "url=https://budget.app.krupakar.in/tracker/"`
+for eg:
+
+```curl -X POST "https://api.telegram.org/bot7231070881:AAFPwGvrniLcsRYv-HYBvmsZfwheBoMhOJY/setWebhook" -d "url=https://budget.app.krupakar.in/tracker/"```
 
 that's all! you're all set!!
